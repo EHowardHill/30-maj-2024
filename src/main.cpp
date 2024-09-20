@@ -38,6 +38,8 @@
 
 using namespace bn;
 using namespace core;
+using namespace keypad;
+using namespace sprite_items;
 using namespace regular_bg_items;
 
 #include "main.h"
@@ -47,6 +49,9 @@ int main()
     init();
 
     auto bg = starsbackground.create_bg(0, 0);
+
+    auto spr_score = score.create_sprite(-88, -48);
+    auto spr_hiscr = score.create_sprite(88, -48);
 
     while (true)
     {

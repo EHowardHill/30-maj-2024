@@ -38,6 +38,7 @@
 #include "bn_sprite_items_ship.h"
 #include "bn_sprite_items_asteroid1.h"
 #include "bn_sprite_items_items.h"
+#include "bn_sprite_items_nick.h"
 #include "bn_regular_bg_items_starsbackground.h"
 #include "bn_regular_bg_items_startscreen.h"
 
@@ -55,22 +56,8 @@ int close(fixed_t<12> x1, fixed_t<12> x2, fixed_t<12> y1, fixed_t<12> y2, int th
     return abs(x1 - x2) <= threshold && abs(y1 - y2) <= threshold;
 }
 
-int stage_title() {
-
-    int ticker = 0;
-
-    auto title = startscreen.create_bg(0, 64);
-    title.set_visible(false);
-
-    while (ticker < 27 + 90) {
-        ticker++;
-
-        if (ticker > 27) {
-            title.set_visible(true);
-        }
-
-        update();
-    }
+int stage_title()
+{
 
     return 0;
 }
@@ -81,30 +68,84 @@ int main()
 
     auto bg = starsbackground.create_bg(0, 64);
 
-    stage_title();
+    auto spr_ship = ship.create_sprite(-76 + 6, 28 - 16, 0);
+    spr_ship.set_scale(2, 2);
+
+    int ticker = 0;
+
+    {
+        auto title = startscreen.create_bg(8, 64 - 16);
+        auto spr_nick = nick.create_sprite(-73 + 8, 30 - 16, 0);
+
+        while (ticker < 27 + 90)
+        {
+            ticker++;
+
+            if (ticker > 27)
+            {
+                title.set_visible(true);
+            }
+
+            update();
+        }
+    }
+
+    while (spr_ship.horizontal_scale() > 1)
+    {
+        auto new_scale = spr_ship.horizontal_scale() - 0.0625;
+        spr_ship.set_scale(new_scale, new_scale);
+        update();
+    }
 
     auto rnd = random();
 
     auto spr_score = score.create_sprite(-82, -67);
     auto spr_hiscr = hiscore.create_sprite(84, -67);
-    auto spr_ship = ship.create_sprite(-82, 0, 0);
 
-    vector<sprite_ptr, 4> asteroids;
-    vector<sprite_ptr, 4> spr_items;
+    vector<sprite_ptr, 6> spr_items;
     int asteroid_speed[4];
+
+    // Define minimum horizontal spacing
+    const int min_spacing = 100;     // Adjust as needed
+    const int min_spacing_item = 75; // Adjust as needed
+
+    // Initialize asteroids
+    vector<sprite_ptr, 4> asteroids;
+    int asteroid_rotation_speed[4];
+    int initial_x_position = 300; // Starting x position off-screen
 
     for (int t = 0; t < 4; t++)
     {
-        auto a = asteroid1.create_sprite(156 + (t * 96), (20 + rnd.get_int(32)) * (((t % 2) << 1) - 1), rnd.get_int(2));
-        a.set_scale(2, 2);
-        asteroids.push_back(a);
-        asteroid_speed[t] = rnd.get_int(7) + 1;
+        // Calculate x position ensuring minimum spacing
+        int x_pos = initial_x_position + t * min_spacing;
 
-        auto b = items.create_sprite(156 + (t * 96), -50 + rnd.get_int(100), rnd.get_int(6));
-        spr_items.push_back(b);
+        // Alternate y-position
+        int y_multiplier = (t % 2 == 0) ? -1 : 1;
+        int y_offset = 24 + rnd.get_int(32); // Random between 20 and 51
+        int y_pos = y_offset * y_multiplier;
+
+        auto asteroid = asteroid1.create_sprite(x_pos, y_pos, rnd.get_int(2));
+        asteroid.set_scale(2, 2);
+        asteroids.push_back(asteroid);
+
+        // Assign random rotation speed between 1 and 7
+        asteroid_rotation_speed[t] = rnd.get_int(7) + 1;
     }
 
-    int ticker = 0;
+    for (int t = 0; t < 6; t++)
+    {
+        // Calculate x position ensuring minimum spacing
+        int x_pos = initial_x_position + t * min_spacing_item;
+
+        // Alternate y-position
+        int y_offset = -24 + rnd.get_int(64); // Random between 20 and 51
+        int y_pos = y_offset;
+
+        auto item = items.create_sprite(x_pos, y_pos, rnd.get_int(5));
+        spr_items.push_back(item);
+    }
+
+    int whoosh = 0;
     while (true)
     {
         bg.set_x(bg.x() - ticker % 2);
@@ -115,15 +156,16 @@ int main()
             spr_ship.set_x(spr_ship.x() - 1);
         }
 
-        if (right_held())
+        if (a_held())
+        {
+            whoosh = 8;
+        }
+
+        if (whoosh > 0)
         {
             moving = true;
             spr_ship.set_x(spr_ship.x() + 2);
-        }
-        else if (left_held() && spr_ship.x() > -82)
-        {
-            moving = true;
-            spr_ship.set_x(spr_ship.x() - 1);
+            whoosh--;
         }
 
         if (up_held() && spr_ship.y() > -35)
@@ -144,28 +186,64 @@ int main()
             spr_ship = ship.create_sprite(spr_ship.x(), spr_ship.y(), 0);
         }
 
-        for (int t = 0; t < asteroids.size(); t++)
+        for (int t = 0; t < spr_items.size(); t++)
         {
-            asteroids.at(t).set_rotation_angle(((ticker) / asteroid_speed[t]) % 360);
-            asteroids.at(t).set_x(asteroids.at(t).x() - 1);
-
-            if (asteroids.at(t).x() < -152)
-            {
-                asteroids.at(t).set_position(rnd.get_int(150) + 150, (20 + rnd.get_int(32)) * (((t % 2) << 1) - 1));
-                asteroid_speed[t] = rnd.get_int(7) + 1;
-            }
-
             spr_items.at(t).set_x(spr_items.at(t).x() - 1);
 
+            // Check if off-screen
             if (spr_items.at(t).x() < -152)
             {
-                spr_items.at(t).set_position(rnd.get_int(150) + 150, -50 + rnd.get_int(100));
-            }
+                // Find maximum x among other asteroids
+                int max_x = -152; // initial_x_position;
+                for (int i = 0; i < spr_items.size(); i++)
+                {
+                    if (i != t && spr_items.at(i).x() > max_x)
+                    {
+                        max_x = spr_items.at(i).x().integer();
+                    }
+                }
+                // Set new x position ensuring minimum spacing
+                int new_x = max_x + min_spacing_item;
 
-            if (close(spr_items.at(t).x(), spr_ship.x(), spr_items.at(t).y(), spr_ship.y(), 16))
+                // Alternate y-position
+                int new_y = -24 + rnd.get_int(64);
+
+                // Update asteroid position
+                spr_items.at(t).set_position(new_x, new_y);
+            }
+        }
+
+        for (int t = 0; t < asteroids.size(); t++)
+        {
+            // Update rotation
+            asteroids.at(t).set_rotation_angle(((ticker) / asteroid_rotation_speed[t]) % 360);
+            // Move left
+            asteroids.at(t).set_x(asteroids.at(t).x() - 1);
+
+            // Check if off-screen
+            if (asteroids.at(t).x() < -152)
             {
-                collect.play();
-                spr_items.at(t).set_position(rnd.get_int(150) + 150, -50 + rnd.get_int(100));
+                // Find maximum x among other asteroids
+                int max_x = -152; // initial_x_position;
+                for (int i = 0; i < asteroids.size(); i++)
+                {
+                    if (i != t && asteroids.at(i).x() > max_x)
+                    {
+                        max_x = asteroids.at(i).x().integer();
+                    }
+                }
+                // Set new x position ensuring minimum spacing
+                int new_x = max_x + min_spacing;
+
+                // Alternate y-position
+                int y_multiplier = (t % 2 == 0) ? -1 : 1;
+                int y_offset = 24 + rnd.get_int(32);
+                int new_y = y_offset * y_multiplier;
+
+                // Update asteroid position
+                asteroids.at(t).set_position(new_x, new_y);
+                // Assign new rotation speed
+                asteroid_rotation_speed[t] = rnd.get_int(24) + 1;
             }
         }
 

@@ -39,6 +39,7 @@
 #include "bn_sprite_items_asteroid1.h"
 #include "bn_sprite_items_items.h"
 #include "bn_regular_bg_items_starsbackground.h"
+#include "bn_regular_bg_items_startscreen.h"
 
 using namespace bn;
 using namespace core;
@@ -54,12 +55,35 @@ int close(fixed_t<12> x1, fixed_t<12> x2, fixed_t<12> y1, fixed_t<12> y2, int th
     return abs(x1 - x2) <= threshold && abs(y1 - y2) <= threshold;
 }
 
+int stage_title() {
+
+    int ticker = 0;
+
+    auto title = startscreen.create_bg(0, 64);
+    title.set_visible(false);
+
+    while (ticker < 27 + 90) {
+        ticker++;
+
+        if (ticker > 27) {
+            title.set_visible(true);
+        }
+
+        update();
+    }
+
+    return 0;
+}
+
 int main()
 {
     init();
 
-    auto rnd = random();
     auto bg = starsbackground.create_bg(0, 64);
+
+    stage_title();
+
+    auto rnd = random();
 
     auto spr_score = score.create_sprite(-82, -67);
     auto spr_hiscr = hiscore.create_sprite(84, -67);
@@ -83,7 +107,7 @@ int main()
     int ticker = 0;
     while (true)
     {
-        bg.set_x(bg.x() - 1);
+        bg.set_x(bg.x() - ticker % 2);
         bool moving = false;
 
         if (spr_ship.x() > -82)
@@ -148,4 +172,6 @@ int main()
         ticker++;
         update();
     }
+
+    return 0;
 }

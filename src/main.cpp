@@ -39,6 +39,8 @@
 #include "bn_sprite_items_asteroid1.h"
 #include "bn_sprite_items_items.h"
 #include "bn_sprite_items_nick.h"
+#include "bn_sprite_items_numbers.h"
+#include "bn_sprite_items_lives.h"
 #include "bn_regular_bg_items_starsbackground.h"
 #include "bn_regular_bg_items_startscreen.h"
 
@@ -51,6 +53,14 @@ using namespace sound_items;
 
 #include "main.h"
 
+enum ShipState
+{
+    state_playing,
+    state_dead,
+    state_wait,
+    state_loading
+};
+
 int close(fixed_t<12> x1, fixed_t<12> x2, fixed_t<12> y1, fixed_t<12> y2, int threshold)
 {
     return abs(x1 - x2) <= threshold && abs(y1 - y2) <= threshold;
@@ -62,11 +72,63 @@ int stage_title()
     return 0;
 }
 
+int update_vector_score(vector<sprite_ptr, 5> &vect, int value)
+{
+
+    int val[5];
+    int divisor = 1;
+    int max_ = 0;
+
+    for (int i = 0; i < 5; i++)
+    {
+        val[i] = (value / divisor) % 10;
+        divisor *= 10;
+        if (value >= divisor)
+        {
+            max_ = i + 1;
+        }
+    }
+    max_++;
+
+    for (int t = 0; t < 5; t++)
+    {
+        vect.at(t) = numbers.create_sprite(vect.at(t).x(), vect.at(t).y(), (t < max_) ? val[t] + 1 : 0);
+    }
+
+    return 0;
+}
+
 int main()
 {
     init();
 
     auto bg = starsbackground.create_bg(0, 64);
+    bg.set_blending_enabled(true);
+    blending::set_transparency_alpha(0);
+
+    for (int t = 0; t < 26; t++)
+    {
+        update();
+    }
+
+    fixed_t<12> alpha_level = 0;
+    for (int t = 0; t < 8; t++)
+    {
+        blending::set_transparency_alpha(alpha_level);
+        if (alpha_level < 1)
+        {
+            alpha_level += 0.125;
+        }
+        update();
+    }
+    bg.set_blending_enabled(false);
+
+    for (int t = 0; t < 24; t++)
+    {
+        update();
+    }
+
+    sound_items::celebrate.play();
 
     auto spr_ship = ship.create_sprite(-76 + 6, 28 - 16, 0);
     spr_ship.set_scale(2, 2);
@@ -90,6 +152,8 @@ int main()
         }
     }
 
+    sound_items::intro.play();
+
     while (spr_ship.horizontal_scale() > 1)
     {
         auto new_scale = spr_ship.horizontal_scale() - 0.0625;
@@ -99,20 +163,30 @@ int main()
 
     auto rnd = random();
 
-    auto spr_score = score.create_sprite(-82, -67);
-    auto spr_hiscr = hiscore.create_sprite(84, -67);
+    auto spr_score_label = score.create_sprite(-82, -67);
+    auto spr_score_high_label = hiscore.create_sprite(84, -67);
+    auto lives_label = lives.create_sprite(-101, 68);
+    auto lives_label_text = lives.create_sprite(-101 + 16, 68, 1);
 
-    vector<sprite_ptr, 6> spr_items;
-    int asteroid_speed[4];
+    vector<sprite_ptr, 5> spr_score;
+    vector<sprite_ptr, 5> spr_score_high;
+    for (int t = 0; t < 5; t++)
+    {
+        auto new_local = numbers.create_sprite(-82 + 21 - (t * 8), -67 + 8, 1);
+        auto new_high = numbers.create_sprite(84 + 21 - (t * 8), -67 + 8, 1);
+
+        spr_score.push_back(new_local);
+        spr_score_high.push_back(new_high);
+    }
 
     // Define minimum horizontal spacing
     const int min_spacing = 100;     // Adjust as needed
     const int min_spacing_item = 75; // Adjust as needed
-
-    // Initialize asteroids
-    vector<sprite_ptr, 4> asteroids;
     int asteroid_rotation_speed[4];
     int initial_x_position = 300; // Starting x position off-screen
+
+    vector<sprite_ptr, 6> spr_items;
+    vector<sprite_ptr, 4> asteroids;
 
     for (int t = 0; t < 4; t++)
     {
@@ -129,7 +203,7 @@ int main()
         asteroids.push_back(asteroid);
 
         // Assign random rotation speed between 1 and 7
-        asteroid_rotation_speed[t] = rnd.get_int(7) + 1;
+        asteroid_rotation_speed[t] = rnd.get_int(24) + 1;
     }
 
     for (int t = 0; t < 6; t++)
@@ -146,49 +220,171 @@ int main()
     }
 
     int whoosh = 0;
+    int score = 0;
+    int score_high = 0;
+    update_vector_score(spr_score, score);
+    update_vector_score(spr_score_high, score_high);
+
+    ShipState state = state_playing;
+    int state_battery = 0;
+
     while (true)
     {
-        bg.set_x(bg.x() - ticker % 2);
+        if (state == state_wait) {
+            bg.set_x(bg.x() - 1);
+        } else {
+            bg.set_x(bg.x() - (ticker % 2));
+        }
+        
         bool moving = false;
 
-        if (spr_ship.x() > -82)
+        switch (state)
         {
-            spr_ship.set_x(spr_ship.x() - 1);
-        }
+        case state_playing:
+        {
+            state_battery = 64;
 
-        if (a_held())
-        {
-            whoosh = 8;
-        }
+            if (spr_ship.x() > -82)
+            {
+                spr_ship.set_x(spr_ship.x() - 1);
+            }
 
-        if (whoosh > 0)
-        {
-            moving = true;
-            spr_ship.set_x(spr_ship.x() + 2);
-            whoosh--;
-        }
+            if (a_held())
+            {
+                whoosh = 8;
+            }
 
-        if (up_held() && spr_ship.y() > -35)
-        {
-            spr_ship.set_y(spr_ship.y() - 1);
-        }
-        else if (down_held() && spr_ship.y() < 35)
-        {
-            spr_ship.set_y(spr_ship.y() + 1);
-        };
+            if (whoosh > 0)
+            {
+                moving = true;
+                spr_ship.set_x(spr_ship.x() + 2);
+                whoosh--;
+            }
 
-        if (moving)
-        {
-            spr_ship = ship.create_sprite(spr_ship.x(), spr_ship.y(), (ticker / 4) % 2);
+            if (up_held() && spr_ship.y() > -35)
+            {
+                spr_ship.set_y(spr_ship.y() - 1);
+            }
+            else if (down_held() && spr_ship.y() < 35)
+            {
+                spr_ship.set_y(spr_ship.y() + 1);
+            };
+
+            if (moving)
+            {
+                spr_ship = ship.create_sprite(spr_ship.x(), spr_ship.y(), (ticker / 4) % 2);
+            }
+            else
+            {
+                spr_ship = ship.create_sprite(spr_ship.x(), spr_ship.y(), 0);
+            }
+
+            break;
         }
-        else
+        case state_dead:
         {
-            spr_ship = ship.create_sprite(spr_ship.x(), spr_ship.y(), 0);
+
+            spr_ship = ship.create_sprite(spr_ship.x(), spr_ship.y(), 2 + ((ticker / 8) % 2));
+
+            if (state_battery > 0)
+            {
+                state_battery--;
+            }
+            else
+            {
+                state = state_wait;
+                state_battery = 53;
+            }
+            break;
+        }
+        case state_wait:
+        {
+            spr_ship.set_visible(false);
+
+            if (state_battery > 0)
+            {
+                state_battery--;
+            }
+            else
+            {
+                state = state_loading;
+                spr_ship = ship.create_sprite(-160, 0, 0);
+
+                spr_items.clear();
+                asteroids.clear();
+
+                for (int t = 0; t < 4; t++)
+                {
+                    // Calculate x position ensuring minimum spacing
+                    int x_pos = initial_x_position + t * min_spacing;
+
+                    // Alternate y-position
+                    int y_multiplier = (t % 2 == 0) ? -1 : 1;
+                    int y_offset = 24 + rnd.get_int(32); // Random between 20 and 51
+                    int y_pos = y_offset * y_multiplier;
+
+                    auto asteroid = asteroid1.create_sprite(x_pos, y_pos, rnd.get_int(2));
+                    asteroid.set_scale(2, 2);
+                    asteroids.push_back(asteroid);
+
+                    // Assign random rotation speed between 1 and 7
+                    asteroid_rotation_speed[t] = rnd.get_int(24) + 1;
+                }
+
+                for (int t = 0; t < 6; t++)
+                {
+                    // Calculate x position ensuring minimum spacing
+                    int x_pos = initial_x_position + t * min_spacing_item;
+
+                    // Alternate y-position
+                    int y_offset = -24 + rnd.get_int(64); // Random between 20 and 51
+                    int y_pos = y_offset;
+
+                    auto item = items.create_sprite(x_pos, y_pos, rnd.get_int(5));
+                    spr_items.push_back(item);
+                }
+
+            }
+
+            break;
+        }
+        case state_loading:
+        {
+            spr_ship.set_visible(true);
+            score = 0;
+
+            if (spr_ship.x() < 48)
+            {
+                spr_ship = ship.create_sprite(spr_ship.x() + 2, spr_ship.y(), (ticker / 4) % 2);
+            }
+            else
+            {
+                state = state_playing;
+            }
+            break;
+        }
+        default:
+        {
+            break;
+        }
         }
 
         for (int t = 0; t < spr_items.size(); t++)
         {
             spr_items.at(t).set_x(spr_items.at(t).x() - 1);
+
+            if (close(spr_items.at(t).x(), spr_ship.x(), spr_items.at(t).y(), spr_ship.y(), 16) && spr_items.at(t).visible() && state == state_playing)
+            {
+                spr_items.at(t).set_visible(false);
+                sound_items::collect.play();
+
+                score += 200;
+                if (score_high < score)
+                    score_high = score;
+
+                update_vector_score(spr_score, score);
+                update_vector_score(spr_score_high, score_high);
+            }
 
             // Check if off-screen
             if (spr_items.at(t).x() < -152)
@@ -210,6 +406,7 @@ int main()
 
                 // Update asteroid position
                 spr_items.at(t).set_position(new_x, new_y);
+                spr_items.at(t).set_visible(true);
             }
         }
 
@@ -219,6 +416,10 @@ int main()
             asteroids.at(t).set_rotation_angle(((ticker) / asteroid_rotation_speed[t]) % 360);
             // Move left
             asteroids.at(t).set_x(asteroids.at(t).x() - 1);
+
+            if (close(asteroids.at(t).x(), spr_ship.x(), asteroids.at(t).y(), spr_ship.y(), 28) && state == state_playing) {
+                state = state_dead;
+            }
 
             // Check if off-screen
             if (asteroids.at(t).x() < -152)

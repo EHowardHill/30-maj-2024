@@ -103,6 +103,8 @@ int main()
 {
     init();
 
+    int music_ticker = -30;
+
     auto bg = starsbackground.create_bg(0, 64);
     bg.set_blending_enabled(true);
     blending::set_transparency_alpha(0);
@@ -131,7 +133,7 @@ int main()
             update();
         }
 
-        sound_items::celebrate.play();
+        sound_items::start_jingle.play();
 
         auto spr_ship = ship.create_sprite(-76 + 6, 28 - 16, 0);
         spr_ship.set_scale(2, 2);
@@ -155,7 +157,7 @@ int main()
             }
         }
 
-        sound_items::intro.play();
+        sound_items::spawn.play();
 
         while (spr_ship.horizontal_scale() > 1)
         {
@@ -169,7 +171,7 @@ int main()
         auto spr_score_label = score.create_sprite(-82, -67);
         auto spr_score_high_label = hiscore.create_sprite(84, -67);
         auto lives_label = lives.create_sprite(-101 - 2, 68 - 4);
-        auto lives_label_text = lives.create_sprite(-101 + 16 - 2, 68 -4, 1);
+        auto lives_label_text = lives.create_sprite(-101 + 16 - 2, 68 - 4, 1);
 
         vector<sprite_ptr, 5> spr_score;
         vector<sprite_ptr, 5> spr_score_high;
@@ -233,8 +235,55 @@ int main()
         int state_battery = 0;
         bool isPlaying = true;
 
+        sound_items::bgmintro.play();
         while (isPlaying)
         {
+            if (music_ticker >= 0 && music_ticker % 60 == 0)
+            {
+                switch ((music_ticker % 720) / 60)
+                {
+                case 0:
+                    sound_items::bgm0.play();
+                    break;
+                case 1:
+                    sound_items::bgm1.play();
+                    break;
+                case 2:
+                    sound_items::bgm2.play();
+                    break;
+                case 3:
+                    sound_items::bgm3.play();
+                    break;
+                case 4:
+                    sound_items::bgm4.play();
+                    break;
+                case 5:
+                    sound_items::bgm5.play();
+                    break;
+                case 6:
+                    sound_items::bgm6.play();
+                    break;
+                case 7:
+                    sound_items::bgm7.play();
+                    break;
+                case 8:
+                    sound_items::bgm8.play();
+                    break;
+                case 9:
+                    sound_items::bgm9.play();
+                    break;
+                case 10:
+                    sound_items::bgm10.play();
+                    break;
+                case 11:
+                    sound_items::bgm11.play();
+                    break;
+                default:
+                    break;
+                }
+            }
+            music_ticker++;
+
             if (state == state_loading)
             {
                 bg.set_x(bg.x() - 2);
@@ -255,6 +304,11 @@ int main()
                 if (spr_ship.x() > -90)
                 {
                     spr_ship.set_x(spr_ship.x() - 2);
+                }
+
+                if (a_pressed())
+                {
+                    sound_items::thrusters.play();
                 }
 
                 if (a_held())
@@ -377,6 +431,11 @@ int main()
                     spr_ship.set_visible(true);
                     score = 0;
 
+                    if (spr_ship.x() == -24)
+                    {
+                        sound_items::spawn.play();
+                    }
+
                     if (spr_ship.x() < 48)
                     {
                         spr_ship = ship.create_sprite(spr_ship.x() + 2, spr_ship.y(), (ticker / 4) % 2);
@@ -446,6 +505,7 @@ int main()
                 if (close(asteroids.at(t).x(), spr_ship.x(), asteroids.at(t).y(), spr_ship.y(), 28) && state == state_playing)
                 {
                     state = state_dead;
+                    sound_items::die.play();
                 }
 
                 // Check if off-screen
@@ -482,9 +542,18 @@ int main()
         auto bg2 = gameoverscreen.create_bg(8, 64 - 16);
 
         int play_mode = 0;
+        bool extro_played = false;
         while (play_mode == 0)
         {
             bg.set_x(bg.x() - 1);
+
+            if (music_ticker % 60 == 0 && extro_played == false)
+            {
+                extro_played = true;
+
+                sound_items::ending_jingle.play();
+            }
+            music_ticker++;
 
             update();
 

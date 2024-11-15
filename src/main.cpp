@@ -44,6 +44,7 @@
 #include "bn_regular_bg_items_starsbackground.h"
 #include "bn_regular_bg_items_startscreen.h"
 #include "bn_regular_bg_items_gameoverscreen.h"
+#include "bn_regular_bg_items_gameoverscreen_text.h"
 
 using namespace bn;
 using namespace core;
@@ -53,6 +54,8 @@ using namespace regular_bg_items;
 using namespace sound_items;
 
 #include "main.h"
+
+#define TIME_CONST 1.88
 
 enum ShipState
 {
@@ -111,53 +114,59 @@ int main()
     bg.set_blending_enabled(true);
     blending::set_transparency_alpha(0);
 
-    while (true)
+    for (int t = 0; t < 26 * TIME_CONST; t++)
     {
-        for (int t = 0; t < 26; t++)
-        {
-            update();
-        }
+        update();
+    }
 
-        fixed_t<12> alpha_level = 0;
-        for (int t = 0; t < 8; t++)
+    fixed_t<12> alpha_level = 0;
+    for (int t = 0; t < 15; t++)
+    {
+        blending::set_transparency_alpha(alpha_level);
+        if (alpha_level < 1)
         {
-            blending::set_transparency_alpha(alpha_level);
-            if (alpha_level < 1)
+            alpha_level += 0.067;
+        }
+        update();
+    }
+    bg.set_blending_enabled(false);
+
+    for (int t = 0; t < 24 * TIME_CONST; t++)
+    {
+        update();
+    }
+
+    sound_items::start_jingle.play();
+
+    auto spr_ship = ship.create_sprite(-76 + 6, 28 - 16, 0);
+    spr_ship.set_scale(2, 2);
+
+    int ticker = 0;
+
+    auto spr_nick = nick.create_sprite(-73 + 8, 30 - 16, 0);
+    spr_nick.set_z_order(-9);
+
+    {
+        auto title = startscreen.create_bg(8, 64 - 16);
+
+        while (ticker < 97 * TIME_CONST)
+        {
+            ticker++;
+
+            if (ticker > 27 * TIME_CONST)
             {
-                alpha_level += 0.125;
+                title.set_visible(true);
             }
+
             update();
         }
-        bg.set_blending_enabled(false);
+    }
 
-        for (int t = 0; t < 24; t++)
-        {
-            update();
-        }
+    spr_nick.set_visible(false);
 
-        sound_items::start_jingle.play();
-
-        auto spr_ship = ship.create_sprite(-76 + 6, 28 - 16, 0);
-        spr_ship.set_scale(2, 2);
-
-        int ticker = 0;
-
-        {
-            auto title = startscreen.create_bg(8, 64 - 16);
-            auto spr_nick = nick.create_sprite(-73 + 8, 30 - 16, 0);
-
-            while (ticker < 27 + 90)
-            {
-                ticker++;
-
-                if (ticker > 27)
-                {
-                    title.set_visible(true);
-                }
-
-                update();
-            }
-        }
+    bool isPlayingContinue = true;
+    while (isPlayingContinue)
+    {
 
         sound_items::spawn.play();
 
@@ -216,7 +225,7 @@ int main()
             asteroids.push_back(asteroid);
 
             // Assign random rotation speed between 1 and 7
-            asteroid_rotation_speed[t] = rnd.get_int(96) - 48;
+            asteroid_rotation_speed[t] = rnd.get_int(4) + 1;
         }
 
         for (int t = 0; t < 6; t++)
@@ -408,7 +417,7 @@ int main()
                         asteroids.push_back(asteroid);
 
                         // Assign random rotation speed between 1 and 7
-                        asteroid_rotation_speed[t] = rnd.get_int(96) - 48;
+                        asteroid_rotation_speed[t] = rnd.get_int(4) + 1;
                     }
 
                     for (int t = 0; t < 6; t++)
@@ -429,7 +438,6 @@ int main()
             }
             case state_loading:
             {
-                BN_LOG("SCORE LIVES: ", score_lives, " - isPlaying: ", isPlaying);
                 if (score_lives < 0)
                 {
                     isPlaying = false;
@@ -505,13 +513,7 @@ int main()
 
             for (int t = 0; t < asteroids.size(); t++)
             {
-                // Update rotation
-                if (asteroid_rotation_speed[t] < 0)
-                {
-                    asteroid_rotation_speed[t] = 360 + asteroid_rotation_speed[t];
-                }
-
-                asteroids.at(t).set_rotation_angle((ticker / asteroid_rotation_speed[t] * 8) % 360);
+                asteroids.at(t).set_rotation_angle((ticker / asteroid_rotation_speed[t]) % 360);
                 // Move left
                 asteroids.at(t).set_x(asteroids.at(t).x() - 1);
 
@@ -544,7 +546,7 @@ int main()
                     // Update asteroid position
                     asteroids.at(t).set_position(new_x, new_y);
                     // Assign new rotation speed
-                    asteroid_rotation_speed[t] = rnd.get_int(96) - 48;
+                    asteroid_rotation_speed[t] = rnd.get_int(4) + 1;
                 }
             }
 
@@ -554,11 +556,33 @@ int main()
 
         auto bg2 = gameoverscreen.create_bg(8, 64 - 16);
 
+        spr_ship = ship.create_sprite(-76 + 6, 28 - 16, 0);
+        spr_ship.set_scale(2, 2);
+        ticker = 0;
+        spr_nick.set_visible(true);
+
         int play_mode = 0;
         bool extro_played = false;
+
+        auto bg3 = gameoverscreen_text.create_bg(8, 64 - 16);
+        bg3.set_visible(false);
+
         while (play_mode == 0)
         {
             bg.set_x(bg.x() - 1);
+
+            if (ticker % 15 == 0)
+            {
+                for (int t = 0; t < spr_score_high.size(); t++)
+                {
+                    spr_score_high.at(t).set_visible(!spr_score_high.at(t).visible());
+                }
+            }
+
+            if (ticker > 47 * TIME_CONST)
+            {
+                bg3.set_visible(true);
+            }
 
             if (music_ticker % 60 == 0 && extro_played == false)
             {
@@ -568,8 +592,6 @@ int main()
             }
             music_ticker++;
 
-            update();
-
             if (a_held())
             {
                 play_mode = 1;
@@ -577,8 +599,20 @@ int main()
             else if (b_held())
             {
                 play_mode = 2;
+                isPlayingContinue = false;
             }
+
+            ticker++;
+            update();
         }
+
+        spr_nick.set_visible(false);
+        music_ticker = 0;
+    }
+
+    while (true)
+    {
+        update();
     }
 
     return 0;

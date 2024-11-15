@@ -2,7 +2,7 @@ from pydub import AudioSegment
 import os
 
 # Load the audio file
-input_file = "audio/bgmloop.wav"
+input_file = "bgmloop.wav"
 audio = AudioSegment.from_wav(input_file)
 
 # Define the chunk duration in milliseconds (0.5 seconds)

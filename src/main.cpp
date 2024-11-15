@@ -405,7 +405,12 @@ int main()
                     for (int t = 0; t < 4; t++)
                     {
                         // Calculate x position ensuring minimum spacing
-                        int x_pos = initial_x_position + t * min_spacing;
+                        int min_spacing_used = min_spacing;
+                        if (rnd.get_int(12) == 0) {
+                            min_spacing_used = rnd.get_int(min_spacing);
+                        }
+
+                        int x_pos = initial_x_position + t * min_spacing_used;
 
                         // Alternate y-position
                         int y_multiplier = (t % 2 == 0) ? -1 : 1;
@@ -540,7 +545,7 @@ int main()
 
                     // Alternate y-position
                     int y_multiplier = (t % 2 == 0) ? -1 : 1;
-                    int y_offset = 24 + rnd.get_int(32);
+                    int y_offset = rnd.get_int(64);
                     int new_y = y_offset * y_multiplier;
 
                     // Update asteroid position

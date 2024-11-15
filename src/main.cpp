@@ -94,6 +94,8 @@ int update_vector_score(vector<sprite_ptr, 5> &vect, int value)
     for (int t = 0; t < 5; t++)
     {
         vect.at(t) = numbers.create_sprite(vect.at(t).x(), vect.at(t).y(), (t < max_) ? val[t] + 1 : 0);
+
+        vect.at(t).set_z_order(-9);
     }
 
     return 0;
@@ -170,6 +172,9 @@ int main()
 
         auto spr_score_label = score.create_sprite(-82, -67);
         auto spr_score_high_label = hiscore.create_sprite(84, -67);
+        spr_score_label.set_z_order(-9);
+        spr_score_high_label.set_z_order(-9);
+
         auto lives_label = lives.create_sprite(-101 - 2, 68 - 4);
         auto lives_label_text = lives.create_sprite(-101 + 16 - 2, 68 - 4, 1);
 
@@ -180,12 +185,15 @@ int main()
             auto new_local = numbers.create_sprite(-82 + 21 - (t * 8), -67 + 8, 1);
             auto new_high = numbers.create_sprite(84 + 21 - (t * 8), -67 + 8, 1);
 
+            new_local.set_z_order(-9);
+            new_high.set_z_order(-9);
+
             spr_score.push_back(new_local);
             spr_score_high.push_back(new_high);
         }
 
         // Define minimum horizontal spacing
-        const int min_spacing = 100;     // Adjust as needed
+        const int min_spacing = 85;      // Adjust as needed
         const int min_spacing_item = 75; // Adjust as needed
         int asteroid_rotation_speed[4];
         int initial_x_position = 300; // Starting x position off-screen
@@ -208,7 +216,7 @@ int main()
             asteroids.push_back(asteroid);
 
             // Assign random rotation speed between 1 and 7
-            asteroid_rotation_speed[t] = rnd.get_int(24) + 1;
+            asteroid_rotation_speed[t] = rnd.get_int(96) - 48;
         }
 
         for (int t = 0; t < 6; t++)
@@ -400,7 +408,7 @@ int main()
                         asteroids.push_back(asteroid);
 
                         // Assign random rotation speed between 1 and 7
-                        asteroid_rotation_speed[t] = rnd.get_int(24) + 1;
+                        asteroid_rotation_speed[t] = rnd.get_int(96) - 48;
                     }
 
                     for (int t = 0; t < 6; t++)
@@ -498,7 +506,12 @@ int main()
             for (int t = 0; t < asteroids.size(); t++)
             {
                 // Update rotation
-                asteroids.at(t).set_rotation_angle(((ticker) / asteroid_rotation_speed[t]) % 360);
+                if (asteroid_rotation_speed[t] < 0)
+                {
+                    asteroid_rotation_speed[t] = 360 + asteroid_rotation_speed[t];
+                }
+
+                asteroids.at(t).set_rotation_angle((ticker / asteroid_rotation_speed[t] * 8) % 360);
                 // Move left
                 asteroids.at(t).set_x(asteroids.at(t).x() - 1);
 
@@ -531,7 +544,7 @@ int main()
                     // Update asteroid position
                     asteroids.at(t).set_position(new_x, new_y);
                     // Assign new rotation speed
-                    asteroid_rotation_speed[t] = rnd.get_int(24) + 1;
+                    asteroid_rotation_speed[t] = rnd.get_int(96) - 48;
                 }
             }
 

@@ -41,6 +41,7 @@
 #include "bn_sprite_items_nick.h"
 #include "bn_sprite_items_numbers.h"
 #include "bn_sprite_items_lives.h"
+#include "bn_sprite_items_black.h"
 #include "bn_regular_bg_items_starsbackground.h"
 #include "bn_regular_bg_items_startscreen.h"
 #include "bn_regular_bg_items_gameoverscreen.h"
@@ -110,7 +111,7 @@ int main()
 
     int music_ticker = -30;
 
-    auto bg = starsbackground.create_bg(0, 64);
+    auto bg = starsbackground.create_bg(0, 48);
     bg.set_blending_enabled(true);
     blending::set_transparency_alpha(0);
 
@@ -186,6 +187,8 @@ int main()
 
         auto lives_label = lives.create_sprite(-101 - 2, 68 - 4);
         auto lives_label_text = lives.create_sprite(-101 + 16 - 2, 68 - 4, 1);
+        lives_label.set_z_order(-9);
+        lives_label_text.set_z_order(-9);
 
         vector<sprite_ptr, 5> spr_score;
         vector<sprite_ptr, 5> spr_score_high;
@@ -255,9 +258,11 @@ int main()
         sound_items::bgmintro.play();
         while (isPlaying)
         {
+            BN_LOG(1);
+
             if (music_ticker >= 0 && music_ticker % 60 == 0)
             {
-                switch ((music_ticker % 720) / 60)
+                switch ((music_ticker % 732) / 60)
                 {
                 case 0:
                     sound_items::bgm0.play();
@@ -295,11 +300,17 @@ int main()
                 case 11:
                     sound_items::bgm11.play();
                     break;
+                case 12:
+                    sound_items::bgm12.play();
+                    music_ticker = -7;
+                    break;
                 default:
                     break;
                 }
             }
             music_ticker++;
+
+            BN_LOG(2);
 
             if (state == state_loading)
             {
@@ -307,8 +318,10 @@ int main()
             }
             else
             {
-                bg.set_x(bg.x() - 1);
+                bg.set_x(bg.x() - (ticker % 2));
             }
+
+            BN_LOG(3);
 
             bool moving = false;
 
@@ -318,7 +331,7 @@ int main()
             {
                 state_battery = 64;
 
-                if (spr_ship.x() > -90)
+                if (spr_ship.x() > -100)
                 {
                     spr_ship.set_x(spr_ship.x() - 2);
                 }
@@ -340,11 +353,11 @@ int main()
                     whoosh--;
                 }
 
-                if (up_held() && spr_ship.y() > -35)
+                if (up_held() && spr_ship.y() > -45)
                 {
                     spr_ship.set_y(spr_ship.y() - 1);
                 }
-                else if (down_held() && spr_ship.y() < 35)
+                else if (down_held() && spr_ship.y() < 45)
                 {
                     spr_ship.set_y(spr_ship.y() + 1);
                 };
@@ -406,7 +419,8 @@ int main()
                     {
                         // Calculate x position ensuring minimum spacing
                         int min_spacing_used = min_spacing;
-                        if (rnd.get_int(12) == 0) {
+                        if (rnd.get_int(12) == 1)
+                        {
                             min_spacing_used = rnd.get_int(min_spacing);
                         }
 
@@ -414,7 +428,7 @@ int main()
 
                         // Alternate y-position
                         int y_multiplier = (t % 2 == 0) ? -1 : 1;
-                        int y_offset = 24 + rnd.get_int(32); // Random between 20 and 51
+                        int y_offset = rnd.get_int(64); // Random between 20 and 51
                         int y_pos = y_offset * y_multiplier;
 
                         auto asteroid = asteroid1.create_sprite(x_pos, y_pos, rnd.get_int(2));
@@ -434,6 +448,24 @@ int main()
                         int y_offset = -24 + rnd.get_int(64); // Random between 20 and 51
                         int y_pos = y_offset;
 
+                        if (state == state_playing)
+                        {
+                            bool overlap = false;
+                            do
+                            {
+                                BN_LOG("!: ", y_offset);
+                                overlap = false;
+                                y_offset = -24 + rnd.get_int(64);
+                                for (int i = 0; i < asteroids.size(); t++)
+                                {
+                                    if (close(asteroids.at(i).x(), x_pos, asteroids.at(i).y(), y_pos, 24))
+                                    {
+                                        overlap = true;
+                                    }
+                                }
+                            } while (overlap);
+                        }
+
                         auto item = items.create_sprite(x_pos, y_pos, rnd.get_int(5));
                         spr_items.push_back(item);
                     }
@@ -451,6 +483,7 @@ int main()
                 {
                     spr_ship.set_visible(true);
                     score = 0;
+                    update_vector_score(spr_score, score);
 
                     if (spr_ship.x() == -24)
                     {
@@ -474,6 +507,8 @@ int main()
                 break;
             }
             }
+
+            BN_LOG(4);
 
             for (int t = 0; t < spr_items.size(); t++)
             {
@@ -506,9 +541,23 @@ int main()
                     }
                     // Set new x position ensuring minimum spacing
                     int new_x = max_x + min_spacing_item;
+                    int new_y = 0;
 
-                    // Alternate y-position
-                    int new_y = -24 + rnd.get_int(64);
+                    bool overlap = false;
+
+                    do
+                    {
+                        new_y = -24 + rnd.get_int(64);
+                        BN_LOG(new_y);
+                        overlap = false;
+                        for (int i = 0; i < asteroids.size(); i++)
+                        {
+                            if (close(asteroids.at(i).x(), new_x, asteroids.at(i).y(), new_y, 36))
+                            {
+                                overlap = true;
+                            }
+                        }
+                    } while (overlap);
 
                     // Update asteroid position
                     spr_items.at(t).set_position(new_x, new_y);
@@ -516,13 +565,15 @@ int main()
                 }
             }
 
+            BN_LOG(5);
+
             for (int t = 0; t < asteroids.size(); t++)
             {
-                asteroids.at(t).set_rotation_angle((ticker / asteroid_rotation_speed[t]) % 360);
+                asteroids.at(t).set_rotation_angle(((ticker * 2) / asteroid_rotation_speed[t]) % 360);
                 // Move left
                 asteroids.at(t).set_x(asteroids.at(t).x() - 1);
 
-                if (close(asteroids.at(t).x(), spr_ship.x(), asteroids.at(t).y(), spr_ship.y(), 28) && state == state_playing)
+                if (close(asteroids.at(t).x(), spr_ship.x(), asteroids.at(t).y(), spr_ship.y(), 24) && state == state_playing)
                 {
                     state = state_dead;
                     sound_items::die.play();
@@ -542,6 +593,11 @@ int main()
                     }
                     // Set new x position ensuring minimum spacing
                     int new_x = max_x + min_spacing;
+                    int rnd_value = rnd.get_int(12);
+                    if (rnd_value == 1)
+                    {
+                        new_x = max_x + rnd.get_int(min_spacing);
+                    }
 
                     // Alternate y-position
                     int y_multiplier = (t % 2 == 0) ? -1 : 1;
@@ -554,6 +610,8 @@ int main()
                     asteroid_rotation_speed[t] = rnd.get_int(4) + 1;
                 }
             }
+
+            BN_LOG(6);
 
             ticker++;
             update();
@@ -572,9 +630,13 @@ int main()
         auto bg3 = gameoverscreen_text.create_bg(8, 64 - 16);
         bg3.set_visible(false);
 
-        while (play_mode == 0)
+        vector<sprite_ptr, 12> spr_black;
+
+        blending::set_transparency_alpha(0);
+
+        while (play_mode != 1)
         {
-            bg.set_x(bg.x() - 1);
+            bg.set_x(bg.x() - (ticker % 2));
 
             if (ticker % 15 == 0)
             {
@@ -601,10 +663,38 @@ int main()
             {
                 play_mode = 1;
             }
-            else if (b_held())
+            else if (b_held() && play_mode != 2)
             {
                 play_mode = 2;
                 isPlayingContinue = false;
+
+                const int cols = 4; // Number of columns
+
+                for (int t = 0; t < 12; t++)
+                {
+                    int col = t % cols; // Column index
+                    int row = t / cols; // Row index
+
+                    int x = (col * 64) - 32 - 64; // Adjust for offset
+                    int y = (row * 64) - 64;      // Adjust for offset
+
+                    auto spr = sprite_items::black.create_sprite(x, y);
+                    spr.set_z_order(-10);
+                    spr.set_blending_enabled(true);
+                    spr_black.push_back(spr);
+                }
+            }
+
+            if (play_mode == 2)
+            {
+                if (blending::transparency_alpha() + 0.08 < 1)
+                {
+                    blending::set_transparency_alpha(blending::transparency_alpha() + 0.08);
+                }
+                else
+                {
+                    blending::set_transparency_alpha(1);
+                }
             }
 
             ticker++;
@@ -613,11 +703,6 @@ int main()
 
         spr_nick.set_visible(false);
         music_ticker = 0;
-    }
-
-    while (true)
-    {
-        update();
     }
 
     return 0;

@@ -230,15 +230,16 @@ int main()
 
             // Alternate y-position
             int y_multiplier = (t % 2 == 0) ? -1 : 1;
-            int y_offset = 24 + rnd.get_int(32); // Random between 20 and 51
+            int y_offset = rnd.get_int(72);
             int y_pos = y_offset * y_multiplier;
 
             auto asteroid = asteroid1.create_sprite(x_pos, y_pos, rnd.get_int(2));
             asteroid.set_scale(2, 2);
             asteroids.push_back(asteroid);
 
-            // Assign random rotation speed between 1 and 7
-            asteroid_rotation_speed[t] = rnd.get_int(4) + 1;
+            asteroid_rotation_speed[t] = rnd.get_int(10) - 5;
+            if (asteroid_rotation_speed[t] == 0)
+                asteroid_rotation_speed[t] = 1;
         }
 
         for (int t = 0; t < 6; t++)
@@ -367,10 +368,12 @@ int main()
 
                 if (up_held() && spr_ship.y() > -72)
                 {
+                    int z = rnd.get_int(8);
                     spr_ship.set_y(spr_ship.y() - 1);
                 }
                 else if (down_held() && spr_ship.y() < 72)
                 {
+                    int z = rnd.get_int(9);
                     spr_ship.set_y(spr_ship.y() + 1);
                 };
 
@@ -440,15 +443,16 @@ int main()
 
                         // Alternate y-position
                         int y_multiplier = (t % 2 == 0) ? -1 : 1;
-                        int y_offset = rnd.get_int(64); // Random between 20 and 51
+                        int y_offset = rnd.get_int(72);
                         int y_pos = y_offset * y_multiplier;
 
                         auto asteroid = asteroid1.create_sprite(x_pos, y_pos, rnd.get_int(2));
                         asteroid.set_scale(2, 2);
                         asteroids.push_back(asteroid);
 
-                        // Assign random rotation speed between 1 and 7
-                        asteroid_rotation_speed[t] = rnd.get_int(4) + 1;
+                        asteroid_rotation_speed[t] = rnd.get_int(10) - 5;
+                        if (asteroid_rotation_speed[t] == 0)
+                            asteroid_rotation_speed[t] = 1;
                     }
 
                     for (int t = 0; t < 6; t++)
@@ -494,7 +498,6 @@ int main()
                 else
                 {
                     spr_ship.set_visible(true);
-                    score = 0;
                     update_vector_score(spr_score, score);
 
                     if (spr_ship.x() == 0)
@@ -590,7 +593,15 @@ int main()
 
             for (int t = 0; t < asteroids.size(); t++)
             {
-                asteroids.at(t).set_rotation_angle(((ticker * 3) / asteroid_rotation_speed[t]) % 360);
+                fixed_t<12> new_rotation = asteroids.at(t).rotation_angle();
+                new_rotation += asteroid_rotation_speed[t];
+
+                if (new_rotation < 0)
+                    new_rotation = 360;
+                if (new_rotation > 360)
+                    new_rotation = 0;
+
+                asteroids.at(t).set_rotation_angle(new_rotation);
                 // Move left
                 asteroids.at(t).set_x(asteroids.at(t).x() - 1);
 
@@ -631,7 +642,9 @@ int main()
                     // Update asteroid position
                     asteroids.at(t).set_position(new_x, new_y);
                     // Assign new rotation speed
-                    asteroid_rotation_speed[t] = rnd.get_int(4) + 1;
+                    asteroid_rotation_speed[t] = rnd.get_int(10) - 5;
+                    if (asteroid_rotation_speed[t] == 0)
+                        asteroid_rotation_speed[t] = 1;
                 }
             }
 
@@ -643,7 +656,8 @@ int main()
 
         for (int t = 0; t < 38; t++)
         {
-            if (sound_master_volume_manager::get() > 0.2) {
+            if (sound_master_volume_manager::get() > 0.2)
+            {
                 sound_master_volume_manager::set(sound_master_volume_manager::get() - 0.021);
             }
 

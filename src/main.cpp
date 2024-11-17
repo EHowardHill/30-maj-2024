@@ -566,10 +566,10 @@ int main()
 
                     bool overlap = false;
 
+                    // Prevent overlap
                     do
                     {
                         new_y = -24 + rnd.get_int(64);
-                        BN_LOG(new_y);
                         overlap = false;
                         for (int i = 0; i < asteroids.size(); i++)
                         {

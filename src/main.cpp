@@ -26,6 +26,7 @@
 #include "bn_camera_actions.h"
 #include <bn_optional.h>
 #include <bn_blending.h>
+#include <bn_sound_actions.h>
 
 #include "bn_music.h"
 // #include "bn_music_items.h"
@@ -109,7 +110,7 @@ int main()
 {
     init();
 
-    int music_ticker = -30;
+    int music_ticker = -48;
 
     auto bg = starsbackground.create_bg(0, 48);
     bg.set_blending_enabled(true);
@@ -132,12 +133,10 @@ int main()
     }
     bg.set_blending_enabled(false);
 
-    for (int t = 0; t < 24 * TIME_CONST; t++)
+    for (int t = 0; t < 46; t++)
     {
         update();
     }
-
-    sound_items::start_jingle.play();
 
     auto spr_ship = ship.create_sprite(-76 + 6, 28 - 16, 0);
     spr_ship.set_scale(2, 2);
@@ -150,9 +149,14 @@ int main()
     {
         auto title = startscreen.create_bg(8, 64 - 16);
 
-        while (ticker < 97 * TIME_CONST)
+        while (ticker < 177)
         {
             ticker++;
+
+            if (ticker == 9)
+            {
+                sound_items::start_jingle.play();
+            }
 
             if (ticker > 27 * TIME_CONST)
             {
@@ -169,14 +173,20 @@ int main()
     while (isPlayingContinue)
     {
 
-        sound_items::spawn.play();
-
+        ticker = 0;
         while (spr_ship.horizontal_scale() > 1)
         {
-            auto new_scale = spr_ship.horizontal_scale() - 0.0625;
+            if (ticker == 7)
+            {
+                sound_items::spawn.play();
+            }
+            ticker++;
+
+            auto new_scale = spr_ship.horizontal_scale() - 0.0208;
             spr_ship.set_scale(new_scale, new_scale);
             update();
         }
+        ticker = 0;
 
         auto rnd = random();
 
@@ -195,7 +205,7 @@ int main()
         for (int t = 0; t < 5; t++)
         {
             auto new_local = numbers.create_sprite(-82 + 21 - (t * 8), -67 + 8, 1);
-            auto new_high = numbers.create_sprite(84 + 21 - (t * 8), -67 + 8, 1);
+            auto new_high = numbers.create_sprite(84 + 29 - (t * 8), -67 + 8, 1);
 
             new_local.set_z_order(-9);
             new_high.set_z_order(-9);
@@ -255,10 +265,14 @@ int main()
         int state_battery = 0;
         bool isPlaying = true;
 
-        sound_items::bgmintro.play();
         while (isPlaying)
         {
             BN_LOG(1);
+
+            if (ticker == 13)
+            {
+                sound_items::bgmintro.play();
+            }
 
             if (music_ticker >= 0 && music_ticker % 60 == 0)
             {
@@ -329,12 +343,7 @@ int main()
             {
             case state_playing:
             {
-                state_battery = 64;
-
-                if (spr_ship.x() > -100)
-                {
-                    spr_ship.set_x(spr_ship.x() - 2);
-                }
+                state_battery = 126;
 
                 if (a_pressed())
                 {
@@ -343,21 +352,24 @@ int main()
 
                 if (a_held())
                 {
-                    whoosh = 8;
-                }
-
-                if (whoosh > 0)
-                {
                     moving = true;
-                    spr_ship.set_x(spr_ship.x() + 3);
-                    whoosh--;
+                    spr_ship.set_x(spr_ship.x() + 1);
+                }
+                else if (spr_ship.x() > -104)
+                {
+                    spr_ship.set_x(spr_ship.x() - 2);
                 }
 
-                if (up_held() && spr_ship.y() > -45)
+                if (a_released())
+                {
+                    moving = false;
+                }
+
+                if (up_held() && spr_ship.y() > -72)
                 {
                     spr_ship.set_y(spr_ship.y() - 1);
                 }
-                else if (down_held() && spr_ship.y() < 45)
+                else if (down_held() && spr_ship.y() < 72)
                 {
                     spr_ship.set_y(spr_ship.y() + 1);
                 };
@@ -376,7 +388,7 @@ int main()
             case state_dead:
             {
 
-                spr_ship = ship.create_sprite(spr_ship.x(), spr_ship.y(), 2 + ((ticker / 8) % 2));
+                spr_ship = ship.create_sprite(spr_ship.x(), spr_ship.y(), 2 + ((ticker / 16) % 2));
 
                 if (state_battery > 0)
                 {
@@ -456,7 +468,7 @@ int main()
                                 BN_LOG("!: ", y_offset);
                                 overlap = false;
                                 y_offset = -24 + rnd.get_int(64);
-                                for (int i = 0; i < asteroids.size(); t++)
+                                for (int i = 0; i < asteroids.size(); i++)
                                 {
                                     if (close(asteroids.at(i).x(), x_pos, asteroids.at(i).y(), y_pos, 24))
                                     {
@@ -485,14 +497,14 @@ int main()
                     score = 0;
                     update_vector_score(spr_score, score);
 
-                    if (spr_ship.x() == -24)
+                    if (spr_ship.x() == 0)
                     {
                         sound_items::spawn.play();
                     }
 
-                    if (spr_ship.x() < 48)
+                    if (spr_ship.x() < 57)
                     {
-                        spr_ship = ship.create_sprite(spr_ship.x() + 2, spr_ship.y(), (ticker / 4) % 2);
+                        spr_ship = ship.create_sprite(spr_ship.x() + 4, spr_ship.y(), (ticker / 4) % 2);
                     }
                     else
                     {
@@ -527,6 +539,15 @@ int main()
                     update_vector_score(spr_score_high, score_high);
                 }
 
+                // repair the silly overlap issue
+                for (int i = 0; i < asteroids.size(); i++)
+                {
+                    if (close(asteroids.at(i).x(), spr_items.at(t).x(), asteroids.at(i).y(), spr_items.at(t).y(), 24))
+                    {
+                        spr_items.at(t).set_y(-24 + rnd.get_int(64));
+                    }
+                }
+
                 // Check if off-screen
                 if (spr_items.at(t).x() < -152)
                 {
@@ -540,7 +561,7 @@ int main()
                         }
                     }
                     // Set new x position ensuring minimum spacing
-                    int new_x = max_x + min_spacing_item;
+                    int new_x = max_x + min_spacing_item + rnd.get_int(64) - 32;
                     int new_y = 0;
 
                     bool overlap = false;
@@ -569,7 +590,7 @@ int main()
 
             for (int t = 0; t < asteroids.size(); t++)
             {
-                asteroids.at(t).set_rotation_angle(((ticker * 2) / asteroid_rotation_speed[t]) % 360);
+                asteroids.at(t).set_rotation_angle(((ticker * 3) / asteroid_rotation_speed[t]) % 360);
                 // Move left
                 asteroids.at(t).set_x(asteroids.at(t).x() - 1);
 
@@ -599,6 +620,9 @@ int main()
                         new_x = max_x + rnd.get_int(min_spacing);
                     }
 
+                    if (new_x < 152)
+                        new_x = 152;
+
                     // Alternate y-position
                     int y_multiplier = (t % 2 == 0) ? -1 : 1;
                     int y_offset = rnd.get_int(64);
@@ -616,6 +640,70 @@ int main()
             ticker++;
             update();
         }
+
+        for (int t = 0; t < 38; t++)
+        {
+            if (sound_master_volume_manager::get() > 0.2) {
+                sound_master_volume_manager::set(sound_master_volume_manager::get() - 0.021);
+            }
+
+            bg.set_x(bg.x() - (ticker % 2));
+
+            if (music_ticker >= 0 && music_ticker % 60 == 0)
+            {
+                switch ((music_ticker % 732) / 60)
+                {
+                case 0:
+                    sound_items::bgm0.play();
+                    break;
+                case 1:
+                    sound_items::bgm1.play();
+                    break;
+                case 2:
+                    sound_items::bgm2.play();
+                    break;
+                case 3:
+                    sound_items::bgm3.play();
+                    break;
+                case 4:
+                    sound_items::bgm4.play();
+                    break;
+                case 5:
+                    sound_items::bgm5.play();
+                    break;
+                case 6:
+                    sound_items::bgm6.play();
+                    break;
+                case 7:
+                    sound_items::bgm7.play();
+                    break;
+                case 8:
+                    sound_items::bgm8.play();
+                    break;
+                case 9:
+                    sound_items::bgm9.play();
+                    break;
+                case 10:
+                    sound_items::bgm10.play();
+                    break;
+                case 11:
+                    sound_items::bgm11.play();
+                    break;
+                case 12:
+                    sound_items::bgm12.play();
+                    music_ticker = -7;
+                    break;
+                default:
+                    break;
+                }
+            }
+            music_ticker++;
+
+            ticker++;
+            update();
+        }
+
+        sound_master_volume_manager::set(1);
 
         auto bg2 = gameoverscreen.create_bg(8, 64 - 16);
 
@@ -646,7 +734,7 @@ int main()
                 }
             }
 
-            if (ticker > 47 * TIME_CONST)
+            if (ticker > 91)
             {
                 bg3.set_visible(true);
             }

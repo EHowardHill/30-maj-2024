@@ -169,6 +169,8 @@ int main()
 
     spr_nick.set_visible(false);
 
+    int score_high = 0;
+
     bool isPlayingContinue = true;
     while (isPlayingContinue)
     {
@@ -257,7 +259,6 @@ int main()
 
         int whoosh = 0;
         int score = 0;
-        int score_high = 0;
         int score_lives = 2;
         update_vector_score(spr_score, score);
         update_vector_score(spr_score_high, score_high);
@@ -434,17 +435,21 @@ int main()
                     {
                         // Calculate x position ensuring minimum spacing
                         int min_spacing_used = min_spacing;
-                        if (rnd.get_int(12) == 1)
-                        {
-                            min_spacing_used = rnd.get_int(min_spacing);
-                        }
-
-                        int x_pos = initial_x_position + t * min_spacing_used;
 
                         // Alternate y-position
                         int y_multiplier = (t % 2 == 0) ? -1 : 1;
                         int y_offset = rnd.get_int(72);
                         int y_pos = y_offset * y_multiplier;
+
+                        if (rnd.get_int(4) == 1)
+                        {
+                            min_spacing_used = rnd.get_int(min_spacing);
+
+                            y_offset = rnd.get_int(22) + 50;
+                            y_pos = y_offset * y_multiplier;
+                        }
+
+                        int x_pos = initial_x_position + t * min_spacing_used;
 
                         auto asteroid = asteroid1.create_sprite(x_pos, y_pos, rnd.get_int(2));
                         asteroid.set_scale(2, 2);

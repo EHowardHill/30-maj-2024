@@ -467,12 +467,12 @@ int main()
                                 y_offset = -24 + rnd.get_int(64);
                                 for (int i = 0; i < asteroids.size(); i++)
                                 {
-                                    if (close(asteroids.at(i).x(), x_pos, asteroids.at(i).y(), y_pos, 24))
+                                    if (close(asteroids.at(i).x(), x_pos, asteroids.at(i).y(), y_pos, 20))
                                     {
                                         overlap = true;
                                     }
                                 }
-                            } while (overlap && tries < 32);
+                            } while (overlap && tries < 7);
                         }
 
                         auto item = items.create_sprite(x_pos, y_pos, rnd.get_int(5));
@@ -555,21 +555,6 @@ int main()
                     int new_y = 0;
 
                     bool overlap = false;
-
-                    // Prevent overlap
-                    int tries = 3;
-                    do
-                    {
-                        new_y = -24 + rnd.get_int(64);
-                        overlap = false;
-                        for (int i = 0; i < asteroids.size(); i++)
-                        {
-                            if (close(asteroids.at(i).x(), new_x, asteroids.at(i).y(), new_y, 36))
-                            {
-                                overlap = true;
-                            }
-                        }
-                    } while (overlap && tries < 32);
 
                     // Update asteroid position
                     spr_items.at(t).set_position(new_x, new_y);

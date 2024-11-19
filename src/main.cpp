@@ -1,15 +1,12 @@
 /*
- * Copyright (c) 2020-2024 Gustavo Valiente gustavo.valiente@protonmail.com
+ * Butano Engine - Copyright (c) 2020-2024 Gustavo Valiente gustavo.valiente@protonmail.com
  * zlib License, see LICENSE file.
  */
 
 #include "bn_core.h"
-#include "bn_log.h"
 #include <bn_fixed.h>
 #include <bn_vector.h>
-#include <bn_random.h>
 #include "bn_display.h"
-#include <bn_math.h>
 #include <bn_keypad.h>
 #include "bn_blending.h"
 #include <bn_sprite_ptr.h>
@@ -26,7 +23,6 @@
 #include "bn_camera_actions.h"
 #include <bn_optional.h>
 #include <bn_blending.h>
-#include <bn_sound_actions.h>
 
 #include "bn_music.h"
 // #include "bn_music_items.h"
@@ -42,7 +38,6 @@
 #include "bn_sprite_items_nick.h"
 #include "bn_sprite_items_numbers.h"
 #include "bn_sprite_items_lives.h"
-#include "bn_sprite_items_black.h"
 #include "bn_regular_bg_items_starsbackground.h"
 #include "bn_regular_bg_items_startscreen.h"
 #include "bn_regular_bg_items_gameoverscreen.h"
@@ -55,9 +50,7 @@ using namespace sprite_items;
 using namespace regular_bg_items;
 using namespace sound_items;
 
-#include "main.h"
-
-#define TIME_CONST 1.88
+const fixed_t<12> TIME_CONST = 1.88;
 
 enum ShipState
 {
@@ -67,20 +60,13 @@ enum ShipState
     state_loading
 };
 
-int close(fixed_t<12> x1, fixed_t<12> x2, fixed_t<12> y1, fixed_t<12> y2, int threshold)
+bool close(fixed_t<12> x1, fixed_t<12> x2, fixed_t<12> y1, fixed_t<12> y2, int threshold)
 {
     return abs(x1 - x2) <= threshold && abs(y1 - y2) <= threshold;
 }
 
-int stage_title()
-{
-
-    return 0;
-}
-
 int update_vector_score(vector<sprite_ptr, 5> &vect, int value)
 {
-
     int val[5];
     int divisor = 1;
     int max_ = 0;
@@ -99,11 +85,68 @@ int update_vector_score(vector<sprite_ptr, 5> &vect, int value)
     for (int t = 0; t < 5; t++)
     {
         vect.at(t) = numbers.create_sprite(vect.at(t).x(), vect.at(t).y(), (t < max_) ? val[t] + 1 : 0);
-
         vect.at(t).set_z_order(-9);
     }
 
     return 0;
+}
+
+void play_bgm(int &music_ticker)
+{
+    if (music_ticker >= 0 && music_ticker % 60 == 0)
+    {
+        switch ((music_ticker % 732) / 60)
+        {
+        case 0:
+            sound_items::bgm0.play();
+            break;
+        case 1:
+            sound_items::bgm1.play();
+            break;
+        case 2:
+            sound_items::bgm2.play();
+            break;
+        case 3:
+            sound_items::bgm3.play();
+            break;
+        case 4:
+            sound_items::bgm4.play();
+            break;
+        case 5:
+            sound_items::bgm5.play();
+            break;
+        case 6:
+            sound_items::bgm6.play();
+            break;
+        case 7:
+            sound_items::bgm7.play();
+            break;
+        case 8:
+            sound_items::bgm8.play();
+            break;
+        case 9:
+            sound_items::bgm9.play();
+            break;
+        case 10:
+            sound_items::bgm10.play();
+            break;
+        case 11:
+            sound_items::bgm11.play();
+            break;
+        case 12:
+            sound_items::bgm12.play();
+            music_ticker = -7;
+            break;
+        default:
+            break;
+        }
+    }
+    music_ticker++;
+}
+
+void move_bg(regular_bg_ptr &bg, int delta)
+{
+    bg.set_x(bg.x() - delta);
 }
 
 int main()
@@ -217,8 +260,8 @@ int main()
         }
 
         // Define minimum horizontal spacing
-        const int min_spacing = 85;      // Adjust as needed
-        const int min_spacing_item = 75; // Adjust as needed
+        const int MIN_ASTEROID_SPACING = 85; // Adjust as needed
+        const int MIN_ITEM_SPACING = 75;     // Adjust as needed
         int asteroid_rotation_speed[4];
         int initial_x_position = 300; // Starting x position off-screen
 
@@ -228,7 +271,7 @@ int main()
         for (int t = 0; t < 4; t++)
         {
             // Calculate x position ensuring minimum spacing
-            int x_pos = initial_x_position + t * min_spacing;
+            int x_pos = initial_x_position + t * MIN_ASTEROID_SPACING;
 
             // Alternate y-position
             int y_multiplier = (t % 2 == 0) ? -1 : 1;
@@ -247,7 +290,7 @@ int main()
         for (int t = 0; t < 6; t++)
         {
             // Calculate x position ensuring minimum spacing
-            int x_pos = initial_x_position + t * min_spacing_item;
+            int x_pos = initial_x_position + t * MIN_ITEM_SPACING;
 
             // Alternate y-position
             int y_offset = -24 + rnd.get_int(64); // Random between 20 and 51
@@ -257,7 +300,6 @@ int main()
             spr_items.push_back(item);
         }
 
-        int whoosh = 0;
         int score = 0;
         int score_lives = 2;
         update_vector_score(spr_score, score);
@@ -269,75 +311,22 @@ int main()
 
         while (isPlaying)
         {
-            BN_LOG(1);
 
             if (ticker == 13)
             {
                 sound_items::bgmintro.play();
             }
 
-            if (music_ticker >= 0 && music_ticker % 60 == 0)
-            {
-                switch ((music_ticker % 732) / 60)
-                {
-                case 0:
-                    sound_items::bgm0.play();
-                    break;
-                case 1:
-                    sound_items::bgm1.play();
-                    break;
-                case 2:
-                    sound_items::bgm2.play();
-                    break;
-                case 3:
-                    sound_items::bgm3.play();
-                    break;
-                case 4:
-                    sound_items::bgm4.play();
-                    break;
-                case 5:
-                    sound_items::bgm5.play();
-                    break;
-                case 6:
-                    sound_items::bgm6.play();
-                    break;
-                case 7:
-                    sound_items::bgm7.play();
-                    break;
-                case 8:
-                    sound_items::bgm8.play();
-                    break;
-                case 9:
-                    sound_items::bgm9.play();
-                    break;
-                case 10:
-                    sound_items::bgm10.play();
-                    break;
-                case 11:
-                    sound_items::bgm11.play();
-                    break;
-                case 12:
-                    sound_items::bgm12.play();
-                    music_ticker = -7;
-                    break;
-                default:
-                    break;
-                }
-            }
-            music_ticker++;
-
-            BN_LOG(2);
+            play_bgm(music_ticker);
 
             if (state == state_loading)
             {
-                bg.set_x(bg.x() - 2);
+                move_bg(bg, 2);
             }
             else
             {
-                bg.set_x(bg.x() - (ticker % 2));
+                move_bg(bg, ticker % 2);
             }
-
-            BN_LOG(3);
 
             bool moving = false;
 
@@ -369,30 +358,27 @@ int main()
 
                 if (up_held() && spr_ship.y() > -72)
                 {
-                    int z = rnd.get_int(8);
                     spr_ship.set_y(spr_ship.y() - 1);
                 }
                 else if (down_held() && spr_ship.y() < 72)
                 {
-                    int z = rnd.get_int(9);
                     spr_ship.set_y(spr_ship.y() + 1);
                 };
 
                 if (moving)
                 {
-                    spr_ship = ship.create_sprite(spr_ship.x(), spr_ship.y(), (ticker / 4) % 2);
+                    spr_ship.set_tiles(ship.tiles_item(), (ticker / 4) % 2);
                 }
                 else
                 {
-                    spr_ship = ship.create_sprite(spr_ship.x(), spr_ship.y(), 0);
+                    spr_ship.set_tiles(ship.tiles_item(), 0);
                 }
 
                 break;
             }
             case state_dead:
             {
-
-                spr_ship = ship.create_sprite(spr_ship.x(), spr_ship.y(), 2 + ((ticker / 16) % 2));
+                spr_ship.set_tiles(ship.tiles_item(), 2 + ((ticker / 16) % 2));
 
                 if (state_battery > 0)
                 {
@@ -429,12 +415,13 @@ int main()
                     if (score_lives > -1)
                     {
                         lives_label_text = lives.create_sprite(-101 + 16 - 2, 68 - 4, 3 - score_lives);
+                        sound_items::respawn.play();
                     }
 
                     for (int t = 0; t < 4; t++)
                     {
                         // Calculate x position ensuring minimum spacing
-                        int min_spacing_used = min_spacing;
+                        int min_spacing_used = MIN_ASTEROID_SPACING;
 
                         // Alternate y-position
                         int y_multiplier = (t % 2 == 0) ? -1 : 1;
@@ -443,7 +430,7 @@ int main()
 
                         if (rnd.get_int(4) == 1)
                         {
-                            min_spacing_used = rnd.get_int(min_spacing);
+                            min_spacing_used = rnd.get_int(MIN_ASTEROID_SPACING - 32) + 32;
 
                             y_offset = rnd.get_int(22) + 50;
                             y_pos = y_offset * y_multiplier;
@@ -463,18 +450,19 @@ int main()
                     for (int t = 0; t < 6; t++)
                     {
                         // Calculate x position ensuring minimum spacing
-                        int x_pos = initial_x_position + t * min_spacing_item;
+                        int x_pos = initial_x_position + t * MIN_ITEM_SPACING;
 
                         // Alternate y-position
                         int y_offset = -24 + rnd.get_int(64); // Random between 20 and 51
                         int y_pos = y_offset;
 
+                        int tries = 0;
                         if (state == state_playing)
                         {
                             bool overlap = false;
                             do
                             {
-                                BN_LOG("!: ", y_offset);
+                                tries++;
                                 overlap = false;
                                 y_offset = -24 + rnd.get_int(64);
                                 for (int i = 0; i < asteroids.size(); i++)
@@ -484,7 +472,7 @@ int main()
                                         overlap = true;
                                     }
                                 }
-                            } while (overlap);
+                            } while (overlap && tries < 32);
                         }
 
                         auto item = items.create_sprite(x_pos, y_pos, rnd.get_int(5));
@@ -505,14 +493,10 @@ int main()
                     spr_ship.set_visible(true);
                     update_vector_score(spr_score, score);
 
-                    if (spr_ship.x() == 0)
-                    {
-                        sound_items::spawn.play();
-                    }
-
                     if (spr_ship.x() < 57)
                     {
-                        spr_ship = ship.create_sprite(spr_ship.x() + 4, spr_ship.y(), (ticker / 4) % 2);
+                        spr_ship.set_tiles(ship.tiles_item(), (ticker / 4) % 2);
+                        spr_ship.set_x(spr_ship.x() + 4);
                     }
                     else
                     {
@@ -527,8 +511,6 @@ int main()
                 break;
             }
             }
-
-            BN_LOG(4);
 
             for (int t = 0; t < spr_items.size(); t++)
             {
@@ -569,12 +551,13 @@ int main()
                         }
                     }
                     // Set new x position ensuring minimum spacing
-                    int new_x = max_x + min_spacing_item + rnd.get_int(64) - 32;
+                    int new_x = max_x + MIN_ITEM_SPACING + rnd.get_int(64) - 32;
                     int new_y = 0;
 
                     bool overlap = false;
 
                     // Prevent overlap
+                    int tries = 3;
                     do
                     {
                         new_y = -24 + rnd.get_int(64);
@@ -586,15 +569,13 @@ int main()
                                 overlap = true;
                             }
                         }
-                    } while (overlap);
+                    } while (overlap && tries < 32);
 
                     // Update asteroid position
                     spr_items.at(t).set_position(new_x, new_y);
                     spr_items.at(t).set_visible(true);
                 }
             }
-
-            BN_LOG(5);
 
             for (int t = 0; t < asteroids.size(); t++)
             {
@@ -617,10 +598,16 @@ int main()
                 }
 
                 // Check if off-screen
-                if (asteroids.at(t).x() < -152)
+                if (asteroids.at(t).x() < -132)
                 {
                     // Find maximum x among other asteroids
                     int max_x = -152; // initial_x_position;
+                    int new_y;
+
+                    // Alternate y-position
+                    int y_multiplier = (t % 2 == 0) ? -1 : 1;
+                    int y_offset = rnd.get_int(64);
+
                     for (int i = 0; i < asteroids.size(); i++)
                     {
                         if (i != t && asteroids.at(i).x() > max_x)
@@ -629,20 +616,18 @@ int main()
                         }
                     }
                     // Set new x position ensuring minimum spacing
-                    int new_x = max_x + min_spacing;
+                    int new_x = max_x + MIN_ASTEROID_SPACING;
                     int rnd_value = rnd.get_int(12);
                     if (rnd_value == 1)
                     {
-                        new_x = max_x + rnd.get_int(min_spacing);
+                        new_x = max_x + rnd.get_int(MIN_ASTEROID_SPACING);
+                        y_offset = 32 + rnd.get_int(32);
                     }
 
                     if (new_x < 152)
                         new_x = 152;
 
-                    // Alternate y-position
-                    int y_multiplier = (t % 2 == 0) ? -1 : 1;
-                    int y_offset = rnd.get_int(64);
-                    int new_y = y_offset * y_multiplier;
+                    new_y = y_offset * y_multiplier;
 
                     // Update asteroid position
                     asteroids.at(t).set_position(new_x, new_y);
@@ -652,8 +637,6 @@ int main()
                         asteroid_rotation_speed[t] = 1;
                 }
             }
-
-            BN_LOG(6);
 
             ticker++;
             update();
@@ -666,58 +649,8 @@ int main()
                 sound_master_volume_manager::set(sound_master_volume_manager::get() - 0.021);
             }
 
-            bg.set_x(bg.x() - (ticker % 2));
-
-            if (music_ticker >= 0 && music_ticker % 60 == 0)
-            {
-                switch ((music_ticker % 732) / 60)
-                {
-                case 0:
-                    sound_items::bgm0.play();
-                    break;
-                case 1:
-                    sound_items::bgm1.play();
-                    break;
-                case 2:
-                    sound_items::bgm2.play();
-                    break;
-                case 3:
-                    sound_items::bgm3.play();
-                    break;
-                case 4:
-                    sound_items::bgm4.play();
-                    break;
-                case 5:
-                    sound_items::bgm5.play();
-                    break;
-                case 6:
-                    sound_items::bgm6.play();
-                    break;
-                case 7:
-                    sound_items::bgm7.play();
-                    break;
-                case 8:
-                    sound_items::bgm8.play();
-                    break;
-                case 9:
-                    sound_items::bgm9.play();
-                    break;
-                case 10:
-                    sound_items::bgm10.play();
-                    break;
-                case 11:
-                    sound_items::bgm11.play();
-                    break;
-                case 12:
-                    sound_items::bgm12.play();
-                    music_ticker = -7;
-                    break;
-                default:
-                    break;
-                }
-            }
-            music_ticker++;
-
+            move_bg(bg, ticker % 2);
+            play_bgm(music_ticker);
             ticker++;
             update();
         }
@@ -737,13 +670,9 @@ int main()
         auto bg3 = gameoverscreen_text.create_bg(8, 64 - 16);
         bg3.set_visible(false);
 
-        vector<sprite_ptr, 12> spr_black;
-
-        blending::set_transparency_alpha(0);
-
         while (play_mode != 1)
         {
-            bg.set_x(bg.x() - (ticker % 2));
+            move_bg(bg, ticker % 2);
 
             if (ticker % 15 == 0)
             {
@@ -766,42 +695,9 @@ int main()
             }
             music_ticker++;
 
-            if (a_held())
+            if (a_held() || b_held())
             {
                 play_mode = 1;
-            }
-            else if (b_held() && play_mode != 2)
-            {
-                play_mode = 2;
-                isPlayingContinue = false;
-
-                const int cols = 4; // Number of columns
-
-                for (int t = 0; t < 12; t++)
-                {
-                    int col = t % cols; // Column index
-                    int row = t / cols; // Row index
-
-                    int x = (col * 64) - 32 - 64; // Adjust for offset
-                    int y = (row * 64) - 64;      // Adjust for offset
-
-                    auto spr = sprite_items::black.create_sprite(x, y);
-                    spr.set_z_order(-10);
-                    spr.set_blending_enabled(true);
-                    spr_black.push_back(spr);
-                }
-            }
-
-            if (play_mode == 2)
-            {
-                if (blending::transparency_alpha() + 0.08 < 1)
-                {
-                    blending::set_transparency_alpha(blending::transparency_alpha() + 0.08);
-                }
-                else
-                {
-                    blending::set_transparency_alpha(1);
-                }
             }
 
             ticker++;

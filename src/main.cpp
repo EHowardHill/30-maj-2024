@@ -262,7 +262,7 @@ int main()
         // Define minimum horizontal spacing
         const int MIN_ASTEROID_SPACING = 85; // Adjust as needed
         const int MIN_ITEM_SPACING = 75;     // Adjust as needed
-        int asteroid_rotation_speed[4];
+        fixed_t<12> asteroid_rotation_speed[4];
         int initial_x_position = 300; // Starting x position off-screen
 
         vector<sprite_ptr, 6> spr_items;
@@ -282,7 +282,7 @@ int main()
             asteroid.set_scale(2, 2);
             asteroids.push_back(asteroid);
 
-            asteroid_rotation_speed[t] = rnd.get_int(10) - 5;
+            asteroid_rotation_speed[t] = (rnd.get_int(24) - 12) / 2;
             if (asteroid_rotation_speed[t] == 0)
                 asteroid_rotation_speed[t] = 1;
         }
@@ -341,7 +341,7 @@ int main()
                     sound_items::thrusters.play();
                 }
 
-                if (a_held())
+                if (a_held() && spr_ship.x() < 104)
                 {
                     moving = true;
                     spr_ship.set_x(spr_ship.x() + 1);
@@ -425,6 +425,12 @@ int main()
 
                         // Alternate y-position
                         int y_multiplier = (t % 2 == 0) ? -1 : 1;
+
+                        if (rnd.get_int(12) == 1)
+                        {
+                            y_multiplier = y_multiplier * -1;
+                        }
+
                         int y_offset = rnd.get_int(72);
                         int y_pos = y_offset * y_multiplier;
 
@@ -433,6 +439,7 @@ int main()
                             min_spacing_used = rnd.get_int(MIN_ASTEROID_SPACING - 32) + 32;
 
                             y_offset = rnd.get_int(22) + 50;
+
                             y_pos = y_offset * y_multiplier;
                         }
 
@@ -442,7 +449,7 @@ int main()
                         asteroid.set_scale(2, 2);
                         asteroids.push_back(asteroid);
 
-                        asteroid_rotation_speed[t] = rnd.get_int(10) - 5;
+                        asteroid_rotation_speed[t] = (rnd.get_int(24) - 12) / 2;
                         if (asteroid_rotation_speed[t] == 0)
                             asteroid_rotation_speed[t] = 1;
                     }
@@ -453,8 +460,7 @@ int main()
                         int x_pos = initial_x_position + t * MIN_ITEM_SPACING;
 
                         // Alternate y-position
-                        int y_offset = -24 + rnd.get_int(64); // Random between 20 and 51
-                        int y_pos = y_offset;
+                        int y_pos = 0; // Random between 20 and 51
 
                         int tries = 0;
                         if (state == state_playing)
@@ -464,7 +470,7 @@ int main()
                             {
                                 tries++;
                                 overlap = false;
-                                y_offset = -24 + rnd.get_int(64);
+                                y_pos = rnd.get_int(144) - 72;
                                 for (int i = 0; i < asteroids.size(); i++)
                                 {
                                     if (close(asteroids.at(i).x(), x_pos, asteroids.at(i).y(), y_pos, 20))
@@ -551,8 +557,27 @@ int main()
                         }
                     }
                     // Set new x position ensuring minimum spacing
-                    int new_x = max_x + MIN_ITEM_SPACING + rnd.get_int(64) - 32;
+                    int new_x = max_x + MIN_ITEM_SPACING + rnd.get_int(96) - 44;
                     int new_y = 0;
+
+                    int tries = 0;
+                    if (state == state_playing)
+                    {
+                        bool overlap = false;
+                        do
+                        {
+                            tries++;
+                            overlap = false;
+                            new_y = rnd.get_int(120) - 60;
+                            for (int i = 0; i < asteroids.size(); i++)
+                            {
+                                if (close(asteroids.at(i).x(), new_x, asteroids.at(i).y(), new_y, 20))
+                                {
+                                    overlap = true;
+                                }
+                            }
+                        } while (overlap && tries < 7);
+                    }
 
                     bool overlap = false;
 
@@ -617,7 +642,7 @@ int main()
                     // Update asteroid position
                     asteroids.at(t).set_position(new_x, new_y);
                     // Assign new rotation speed
-                    asteroid_rotation_speed[t] = rnd.get_int(10) - 5;
+                    asteroid_rotation_speed[t] = (rnd.get_int(24) - 12) / 2;
                     if (asteroid_rotation_speed[t] == 0)
                         asteroid_rotation_speed[t] = 1;
                 }
